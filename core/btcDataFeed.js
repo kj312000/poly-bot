@@ -16,8 +16,9 @@ const EventEmitter = require('events');
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const WS_ENDPOINT = 'wss://stream.binance.com:9443/stream?streams=' +
-  'btcusdt@aggTrade/btcusdt@kline_1m/btcusdt@depth20@100ms';
+// stream.binance.us for US-hosted servers (EC2 us-east/us-west); stream.binance.com elsewhere
+const WS_ENDPOINT = (process.env.BINANCE_WS_ENDPOINT) ||
+  'wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/btcusdt@kline_1m/btcusdt@depth20@100ms';
 
 const TICK_HISTORY   = 600;   // max trade ticks kept
 const PRICE_HISTORY  = 120;   // price snapshots (one per tick batch)
