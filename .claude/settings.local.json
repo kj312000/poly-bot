@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\kaust\\\\Documents\\\\polymarket\" -Recurse -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "Bash(npm install *)",
+      "Bash(node --check index.js)",
+      "Bash(node --check core/coordinator.js)",
+      "Bash(node --check core/executionEngine.js)",
+      "Bash(node --check adapters/polymarketRest.js)",
+      "Bash(node --check adapters/polymarketWs.js)",
+      "Bash(node index.js --mode=paper)",
+      "Bash(node index.js --mode=backtest)",
+      "Bash(node --check optimization/claudeAdvisor.js)",
+      "Bash(node --check optimization/strategyOptimizer.js)",
+      "Bash(node --check shared/agentParams.js)",
+      "Bash(node -e ' *)",
+      "Bash(node index.js --mode=optimize)",
+      "Bash(node index.js --mode=optimize --target-wr=0.75 --max-iter=15 --bt-days=7)",
+      "Bash(node --check optimization/annualAnalyzer.js)",
+      "Bash(node --check backtest/annualReport.js)"
+    ]
+  }
+}

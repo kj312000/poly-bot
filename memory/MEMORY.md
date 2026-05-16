@@ -1,0 +1,1 @@
+- [Polymarket Architecture](project_architecture.md) — System structure after adding REST/WS adapters, position book, Prometheus metrics, backtest replay engine

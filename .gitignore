@@ -1,0 +1,33 @@
+# Environment — contains private keys and API secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Database — persistent state, not source
+db/*.json
+!db/.gitkeep
+
+# Logs
+logs/
+*.log
+*.jsonl
+
+# Dashboard generated files
+dashboard/last-session.json
+dashboard/dashboard.json
+dashboard/*.html
+dashboard/*.log
+dashboard/optimization-history.json
+dashboard/backtest-summary.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

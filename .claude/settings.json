@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.polymarket.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:jeremywhittaker.com)",
+      "WebFetch(domain:agentbets.ai)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:pm.wiki)",
+      "WebFetch(domain:rekko.ai)",
+      "WebFetch(domain:deepwiki.com)",
+      "Bash(node scripts/getApiKey.mjs)",
+      "Bash(node --input-type=module)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\kaust\\\\Documents\\\\polymarket\" -Recurse -File)",
+      "Bash(Select-Object FullName)",
+      "Bash(ConvertTo-Csv -NoTypeInformation)",
+      "Bash(Out-String)",
+      "Bash(node -e \"const { LocalOrderbook } = require\\('./core/localOrderbook'\\); const b = new LocalOrderbook\\('test'\\); b.update\\({ bids: [{price:0.45,size:10},{price:0.44,size:5}], asks: [{price:0.47,size:8},{price:0.48,size:3}] }\\); console.log\\('bestBid:', b.bestBid, 'bestAsk:', b.bestAsk, 'mid:', b.mid\\); const q = b.selectTakerQuote\\({isBuy:true,requestedSize:6,maxSlippage:0.05,referencePrice:0.45,maxNotional:5,tickSize:'0.01',minFillSize:1}\\); console.log\\('quote:', JSON.stringify\\(q\\)\\); console.log\\('sellPrice:', b.getBestSellPrice\\(\\)\\); console.log\\('stale\\(1ms\\):', b.isStale\\(1\\)\\);\")",
+      "Bash(node -e ' *)",
+      "Bash(node --check core/fastExecutor.js)",
+      "Bash(node --check core/positionMonitor.js)",
+      "Bash(node --check core/btcDataFeed.js)",
+      "Bash(node --check core/localOrderbook.js)",
+      "Read(//c/Users/kaust/.claude/projects/c--Users-kaust-Documents-polymarket/memory/**)",
+      "Bash(node -e \"const pkg = require\\('@polymarket/clob-client-v2'\\); console.log\\('exports:', Object.keys\\(pkg\\)\\);\")",
+      "Bash(del \"c:\\\\Users\\\\kaust\\\\Documents\\\\polymarket\\\\railway.toml\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\kaust\\.claude\\projects\\c--Users-kaust-Documents-polymarket\\memory"
+    ]
+  }
+}

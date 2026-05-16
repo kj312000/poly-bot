@@ -1,0 +1,37 @@
+{
+  "name": "polymarket-multi-agent-trader",
+  "version": "1.0.0",
+  "description": "Production-ready multi-agent autonomous trading system for Polymarket",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node dashboard/server.js",
+    "cli": "node index.js",
+    "paper": "node index.js --mode=paper",
+    "live": "node index.js --mode=live",
+    "live:real": "node index.js --mode=live --adapter=real",
+    "backtest": "node index.js --mode=backtest",
+    "backtest:real": "node index.js --mode=backtest --adapter=real",
+    "metrics": "node index.js --mode=paper --metrics",
+    "optimize": "node index.js --mode=optimize",
+    "optimize:aggressive": "node index.js --mode=optimize --target-wr=0.75 --max-iter=15 --bt-days=7",
+    "annual": "node index.js --mode=annual",
+    "annual:strict": "node index.js --mode=annual --target-wr=0.82 --max-rounds=8",
+    "dashboard": "node dashboard/server.js",
+    "get-api-key": "node scripts/getApiKey.mjs",
+    "test-order":  "node scripts/testOrder.mjs",
+    "close-pos":       "node scripts/closePosition.mjs",
+    "telegram-setup":  "node scripts/telegramSetup.mjs"
+  },
+  "dependencies": {
+    "@polymarket/clob-client-v2": "^1.0.6",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.16.0",
+    "express": "^4.19.2",
+    "https-proxy-agent": "^9.0.0",
+    "prom-client": "^15.1.3",
+    "socks-proxy-agent": "^10.0.0",
+    "viem": "^2.48.11",
+    "ws": "^8.17.1"
+  }
+}

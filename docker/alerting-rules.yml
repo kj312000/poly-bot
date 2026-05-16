@@ -1,0 +1,67 @@
+groups:
+  - name: polymarket_trader
+    interval: 15s
+    rules:
+
+      - alert: HighDrawdown
+        expr: polymarket_portfolio_drawdown_ratio > 0.07
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Portfolio drawdown above 7%"
+          description: "Current drawdown is {{ $value | humanizePercentage }}. Approaching max drawdown limit."
+
+      - alert: CriticalDrawdown
+        expr: polymarket_portfolio_drawdown_ratio > 0.09
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Portfolio drawdown near limit (>9%)"
+          description: "Drawdown is {{ $value | humanizePercentage }}. Auto-stop will trigger at 10%."
+
+      - alert: NegativePnL
+        expr: polymarket_portfolio_pnl_usd < -50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Total PnL below -$50"
+          description: "Current PnL: ${{ $value | humanize }}"
+
+      - alert: NoTradesRecently
+        expr: increase(polymarket_trades_total[10m]) == 0
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "No trades executed in the last 10 minutes"
+          description: "The trading system may be halted or all proposals are being filtered."
+
+      - alert: WebSocketDisconnected
+        expr: polymarket_ws_connected == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Polymarket WebSocket disconnected"
+          description: "Live price feed is down. Market data may be stale."
+
+      - alert: TooManyOpenPositions
+        expr: polymarket_open_positions_count > 6
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "Open positions count is high ({{ $value }})"
+          description: "Consider if portfolio is too concentrated."
+
+      - alert: AgentLowWinRate
+        expr: polymarket_agent_win_rate < 0.3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Agent {{ $labels.agent }} win rate below 30%"
+          description: "Win rate: {{ $value | humanizePercentage }}. Learning engine should reduce allocation."
