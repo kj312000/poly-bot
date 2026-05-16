@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Polymarket BTC Scalp Trader</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+:root {
+  --bg:       #080a10;
+  --surface:  #0e1018;
+  --card:     #12151f;
+  --card2:    #171b28;
+  --border:   #1c2030;
+  --primary:  #3d8ef0;
+  --green:    #00c896;
+  --red:      #f0365a;
+  --yellow:   #f5a623;
+  --purple:   #9b7efc;
+  --text:     #dde3f0;
+  --muted:    #4a5270;
+  --nav-w:    190px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 13px; display: flex; height: 100vh; overflow: hidden;
+}
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+#sidebar {
+  width: var(--nav-w); background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0;
+}
+.brand { padding: 16px 14px 12px; border-bottom: 1px solid var(--border); }
+.brand-name { font-size: 13px; font-weight: 700; color: var(--primary); letter-spacing: .04em; }
+.brand-sub  { font-size: 10px; color: var(--muted); margin-top: 3px; }
+nav { padding: 6px 0; flex: 1; overflow-y: auto; }
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 14px; cursor: pointer; color: var(--muted);
+  font-size: 12px; transition: all .12s;
+  border-left: 2px solid transparent; user-select: none;
+}
+.nav-item:hover  { color: var(--text); background: rgba(61,142,240,.05); }
+.nav-item.active { color: var(--primary); background: rgba(61,142,240,.08); border-left-color: var(--primary); }
+.nav-ico { font-size: 14px; width: 18px; text-align: center; }
+.sidebar-foot { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 11px; }
+.dot {
+  display: inline-block; width: 7px; height: 7px;
+  border-radius: 50%; background: #2a2e3d;
+  margin-right: 6px; vertical-align: middle; transition: all .3s;
+}
+.dot.on      { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot.trading { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: blink 1.4s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+#topbar {
+  flex-shrink: 0; display: flex; align-items: center; gap: 0;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 16px; height: 52px;
+}
+.tb-group { display: flex; align-items: center; gap: 10px; padding: 0 14px; border-right: 1px solid var(--border); }
+.tb-group:first-child { padding-left: 0; }
+.tb-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.tb-val { font-size: 16px; font-weight: 700; line-height: 1.2; margin-top: 1px; }
+.tb-right { margin-left: auto; display: flex; gap: 8px; align-items: center; padding-left: 14px; }
+.badge { padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+.badge-live  { background: rgba(0,200,150,.12); color: var(--green); border: 1px solid var(--green); }
+.badge-paper { background: rgba(245,166,35,.12); color: var(--yellow); border: 1px solid var(--yellow); }
+.badge-sim   { background: rgba(61,142,240,.12); color: #3d8ef0; border: 1px solid #3d8ef0; }
+.badge-real  { background: rgba(240,54,90,.12); color: var(--red); border: 1px solid var(--red); }
+.toggle-mode { cursor: pointer; user-select: none; }
+.toggle-mode:hover { filter: brightness(1.15); }
+
+#btc-strip {
+  flex-shrink: 0; display: flex; align-items: center; gap: 0;
+  background: var(--card); border-bottom: 1px solid var(--border);
+  padding: 0 16px; height: 36px; overflow: hidden;
+}
+.strip-item { display: flex; flex-direction: column; padding: 0 12px; border-right: 1px solid var(--border); }
+.strip-item:first-child { padding-left: 0; }
+.strip-lbl { font-size: 8px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.strip-val { font-size: 12px; font-weight: 600; line-height: 1.4; }
+.strip-signal { margin-left: auto; display: flex; align-items: center; gap: 10px; padding-left: 12px; }
+
+#content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px 16px; }
+.section { display: none; }
+.section.active { display: block; }
+
+.sec-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+.c-g { color: var(--green); } .c-r { color: var(--red); }
+.c-y { color: var(--yellow); } .c-p { color: var(--purple); }
+.c-b { color: var(--primary); }
+
+.stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 8px; margin-bottom: 12px; }
+.stat { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.stat-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 4px; }
+.stat-val { font-size: 19px; font-weight: 700; }
+.stat-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.card-hd {
+  font-size: 9px; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--muted); margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.g2   { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.g3   { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.g2-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px; }
+
+canvas { max-height: 190px; }
+
+.tbl-wrap { overflow-y: auto; max-height: 400px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th {
+  font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); padding: 5px 8px; text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: var(--card); position: sticky; top: 0; z-index: 2;
+}
+tbody td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr:hover td { background: rgba(61,142,240,.03); }
+
+.side-yes { color: var(--green); font-weight: 700; }
+.side-no  { color: var(--red);   font-weight: 700; }
+.bmatched { background: rgba(0,200,150,.1); color: var(--green); border-radius: 4px; padding: 1px 6px; font-size: 9px; font-weight: 700; }
+.bsubmit  { background: rgba(61,142,240,.1); color: var(--primary); border-radius: 4px; padding: 1px 6px; font-size: 9px; }
+.berror   { background: rgba(240,54,90,.1); color: var(--red); border-radius: 4px; padding: 1px 6px; font-size: 9px; }
+.bpaper   { background: rgba(245,166,35,.1); color: var(--yellow); border-radius: 20px; padding: 1px 7px; font-size: 9px; }
+.blive    { background: rgba(0,200,150,.1); color: var(--green); border-radius: 20px; padding: 1px 7px; font-size: 9px; }
+
+.btn { padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; transition: all .12s; }
+.btn-green { background: var(--green); color: #080a10; }
+.btn-red   { background: var(--red);   color: #fff; }
+.btn-blue  { background: var(--primary); color: #fff; }
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.btn:hover:not(:disabled) { filter: brightness(1.1); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+.logbox {
+  background: var(--card2); border: 1px solid var(--border); border-radius: 7px;
+  padding: 10px 12px; overflow-y: auto; font-family: 'Consolas','Cascadia Code',monospace;
+  font-size: 11px; line-height: 1.7;
+}
+
+.step-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.step-n     { font-size: 22px; margin-bottom: 6px; }
+.step-title { font-weight: 700; font-size: 13px; margin-bottom: 5px; }
+.step-desc  { color: var(--muted); font-size: 11px; line-height: 1.7; }
+.reg-box    { display: none; margin-top: 10px; padding: 10px; background: var(--card2); border: 1px solid var(--yellow); border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="brand">
+    <div class="brand-name">⬡ Polymarket</div>
+    <div class="brand-sub">BTC Scalp Trader</div>
+  </div>
+  <nav>
+    <div class="nav-item active" onclick="nav('dashboard',this)"><span class="nav-ico">📊</span>Dashboard</div>
+    <div class="nav-item"        onclick="nav('trades',this)">  <span class="nav-ico">📋</span>Trades</div>
+    <div class="nav-item"        onclick="nav('vpn',this)">     <span class="nav-ico">🔒</span>VPN Setup</div>
+    <div class="nav-item"        onclick="nav('logs',this)">    <span class="nav-ico">📜</span>Logs</div>
+  </nav>
+  <div class="sidebar-foot">
+    <div><span class="dot" id="conn-dot"></span><span id="conn-txt" style="color:var(--muted)">Connecting…</span></div>
+    <div style="margin-top:4px;color:var(--muted)" id="clock">—</div>
+  </div>
+</div>
+
+<div id="main">
+
+  <div id="topbar">
+    <div class="tb-group">
+      <div>
+        <div class="tb-lbl">Equity</div>
+        <div class="tb-val c-b" id="h-equity">$—</div>
+      </div>
+    </div>
+    <div class="tb-group">
+      <div>
+        <div class="tb-lbl">Session P&L</div>
+        <div class="tb-val" id="h-pnl">—</div>
+      </div>
+    </div>
+    <div class="tb-group">
+      <div>
+        <div class="tb-lbl">Win Rate</div>
+        <div class="tb-val" id="h-wr">—</div>
+      </div>
+    </div>
+    <div class="tb-group">
+      <div>
+        <div class="tb-lbl">Trades</div>
+        <div class="tb-val c-p" id="h-trades">0</div>
+      </div>
+    </div>
+    <div class="tb-group" style="border-right:none">
+      <div>
+        <div class="tb-lbl">Open</div>
+        <div class="tb-val" id="h-open">0</div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <span class="badge badge-paper" id="mode-badge">PAPER</span>
+      <span class="badge badge-sim toggle-mode" id="dryrun-badge" onclick="toggleDryRun()" title="Click to toggle real ↔ test">TEST</span>
+      <button class="btn btn-green" id="btn-start" onclick="startTrading()">▶ Start</button>
+      <button class="btn btn-red"   id="btn-stop"  onclick="stopTrading()" disabled>■ Stop</button>
+      <button class="btn btn-ghost" onclick="resetSystem()" title="Reset session">↺</button>
+    </div>
+  </div>
+
+  <div id="btc-strip">
+    <div class="strip-item">
+      <div class="strip-lbl">BTC</div>
+      <div class="strip-val c-b" id="st-price">—</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-lbl">30s Vel</div>
+      <div class="strip-val" id="st-v30">—</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-lbl">Buy Pres.</div>
+      <div class="strip-val" id="st-pres">—</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-lbl">OB Imbal.</div>
+      <div class="strip-val" id="st-ob">—</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-lbl">Vol Ratio</div>
+      <div class="strip-val" id="st-vol">—</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-lbl">Spread</div>
+      <div class="strip-val" id="st-spd">—</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-lbl">Z-Score</div>
+      <div class="strip-val" id="st-z">—</div>
+    </div>
+    <div class="strip-signal">
+      <div style="font-size:9px;color:var(--muted)">SIGNAL</div>
+      <div id="st-conf" style="font-weight:700;font-size:13px">—</div>
+      <div id="btc-ws-dot" style="width:7px;height:7px;border-radius:50%;background:#2a2e3d" title="WebSocket"></div>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- DASHBOARD -->
+    <div class="section active" id="sec-dashboard">
+      <div class="g2-3">
+        <div class="card">
+          <div class="card-hd">Equity Curve <span id="db-drawdown" style="color:var(--red)"></span></div>
+          <canvas id="chart-equity"></canvas>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="card" style="flex:1">
+            <div class="card-hd">
+              BTC Scalp Signal
+              <span id="btc-session-badge" style="font-size:9px;padding:2px 7px;border-radius:20px;background:rgba(155,126,252,.1);color:var(--purple);border:1px solid var(--purple)">ACTIVE</span>
+            </div>
+            <div id="btc-stats" style="font-size:12px;color:var(--muted)">Waiting for signal…</div>
+            <div id="btc-signal-box" style="display:none;margin-top:8px;padding:8px;background:var(--card2);border-radius:6px;font-size:11px;line-height:1.8"></div>
+          </div>
+          <div class="stats-row" style="margin-bottom:0;grid-template-columns:1fr 1fr">
+            <div class="stat"><div class="stat-lbl">P&L</div><div class="stat-val" id="db-pnl">$0.00</div></div>
+            <div class="stat"><div class="stat-lbl">Win Rate</div><div class="stat-val" id="db-wr">—</div></div>
+            <div class="stat"><div class="stat-lbl">Trades</div><div class="stat-val c-p" id="db-tt">0</div></div>
+            <div class="stat"><div class="stat-lbl">Drawdown</div><div class="stat-val c-r" id="db-dd">0%</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">Recent Trades <a onclick="nav('trades',document.querySelectorAll('.nav-item')[1])" style="color:var(--primary);cursor:pointer">View all →</a></div>
+        <table>
+          <thead><tr><th>Time</th><th>Side</th><th>Price</th><th>Notional</th><th>R:R</th><th>P&L</th><th>Status</th><th>Mode</th></tr></thead>
+          <tbody id="recent-tbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No trades yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TRADES -->
+    <div class="section" id="sec-trades">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="sec-title" style="margin:0">Trade History</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="th-count" style="font-size:11px;color:var(--muted)">0 trades</span>
+          <button class="btn btn-ghost" style="font-size:11px" onclick="exportTrades()">⬇ Export CSV</button>
+        </div>
+      </div>
+      <div class="stats-row" style="grid-template-columns:repeat(6,1fr);margin-bottom:12px">
+        <div class="stat"><div class="stat-lbl">Total P&L</div><div class="stat-val" id="th-pnl">$0.00</div></div>
+        <div class="stat"><div class="stat-lbl">Win Rate</div><div class="stat-val" id="th-wr">—</div></div>
+        <div class="stat"><div class="stat-lbl">Avg Win</div><div class="stat-val c-g" id="th-avgw">—</div></div>
+        <div class="stat"><div class="stat-lbl">Avg Loss</div><div class="stat-val c-r" id="th-avgl">—</div></div>
+        <div class="stat"><div class="stat-lbl">Best</div><div class="stat-val c-g" id="th-best">—</div></div>
+        <div class="stat"><div class="stat-lbl">Worst</div><div class="stat-val c-r" id="th-worst">—</div></div>
+      </div>
+      <div class="card">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Time</th><th>Market</th><th>Side</th><th>Price</th><th>Size</th><th>Notional</th><th>EV</th><th>Conf</th><th>TP</th><th>SL</th><th>R:R</th><th>P&L</th><th>Status</th><th>Mode</th></tr></thead>
+            <tbody id="trade-tbody"><tr><td colspan="15" style="text-align:center;color:var(--muted);padding:30px">No trades yet</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VPN SETUP -->
+    <div class="section" id="sec-vpn">
+      <div class="sec-title">VPN Setup</div>
+      <div class="g3" style="margin-bottom:14px">
+        <div class="step-card">
+          <div class="step-n">1️⃣</div>
+          <div class="step-title">Connect Proton VPN</div>
+          <div class="step-desc">Open Proton VPN → connect to any <strong style="color:var(--text)">US or Netherlands</strong> server. Once the icon turns green, come back here.</div>
+        </div>
+        <div class="step-card">
+          <div class="step-n">2️⃣</div>
+          <div class="step-title">Test Connection</div>
+          <div class="step-desc" style="margin-bottom:10px">Checks Polymarket is reachable through your VPN.</div>
+          <button class="btn btn-blue" id="btn-test-proxy" onclick="testProxy()" style="width:100%">⚡ Test Now</button>
+          <div id="proxy-test-msg" style="margin-top:8px;font-size:11px;min-height:14px"></div>
+        </div>
+        <div class="step-card">
+          <div class="step-n">3️⃣</div>
+          <div class="step-title">Get API Key</div>
+          <div class="step-desc" style="margin-bottom:10px">Signs with your wallet, saves credentials to .env.</div>
+          <button class="btn btn-green" id="btn-gen-key" onclick="generateKey()" style="width:100%">🔑 Generate Key</button>
+          <div id="key-gen-msg" style="margin-top:8px;font-size:11px;min-height:14px"></div>
+          <div class="reg-box" id="register-prompt">
+            <div style="color:var(--yellow);font-weight:700;margin-bottom:5px">⚠ Wallet not registered</div>
+            <div style="color:var(--muted);font-size:11px;margin-bottom:8px">Sign up on Polymarket first.</div>
+            <code id="reg-wallet" style="font-size:10px;color:var(--muted);display:block;margin-bottom:8px;word-break:break-all"></code>
+            <a href="https://polymarket.com" target="_blank" style="display:block;text-align:center;padding:7px;background:var(--primary);color:#fff;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none">Open polymarket.com →</a>
+            <div style="color:var(--muted);font-size:10px;margin-top:8px;line-height:1.7">1. VPN must be on<br>2. Connect wallet → accept terms<br>3. Return here → Generate Key</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">Wallet Balances <button class="btn btn-ghost" style="padding:2px 8px;font-size:10px" onclick="loadWallet()">↺ Refresh</button></div>
+        <div id="vpn-wallet-detail" style="font-size:12px;color:var(--muted)">Loading…</div>
+      </div>
+    </div>
+
+    <!-- LOGS -->
+    <div class="section" id="sec-logs">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="sec-title" style="margin:0">System Logs</div>
+        <button class="btn btn-ghost" onclick="document.getElementById('log-box').innerHTML=''">Clear</button>
+      </div>
+      <div class="card">
+        <div class="logbox" id="log-box" style="height:calc(100vh - 200px)"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let S = {};
+let equityChart = null;
+
+setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }, 1000);
+
+function connect() {
+  const es = new EventSource('/events');
+  es.addEventListener('state', e => { S = JSON.parse(e.data); render(); });
+  es.addEventListener('log',   e => { appendLog(JSON.parse(e.data).msg); });
+  es.onopen  = () => setConn('on');
+  es.onerror = () => { setConn('off'); setTimeout(connect, 3000); es.close(); };
+}
+function setConn(state) {
+  const d = document.getElementById('conn-dot'), t = document.getElementById('conn-txt');
+  d.className = 'dot' + (state === 'on' ? (S.status === 'trading' ? ' trading' : ' on') : '');
+  t.textContent = state === 'on' ? (S.status === 'trading' ? 'Trading…' : 'Connected') : 'Disconnected';
+  t.style.color  = state === 'on' ? 'var(--text)' : 'var(--muted)';
+}
+
+function nav(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  if (id === 'vpn')    loadWallet();
+  if (id === 'trades') renderTradeHistory();
+}
+
+function render() {
+  if (!S) return;
+  const pnl = S.pnl || 0;
+  const wr  = (S.winRate || 0).toFixed(1);
+
+  document.getElementById('h-equity').textContent = '$' + (S.equity || 0).toFixed(2);
+  const pnlEl = document.getElementById('h-pnl');
+  pnlEl.textContent = (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toFixed(2);
+  pnlEl.className   = 'tb-val ' + (pnl >= 0 ? 'c-g' : 'c-r');
+  document.getElementById('h-wr').textContent     = wr + '%';
+  document.getElementById('h-wr').className       = 'tb-val ' + (parseFloat(wr) >= 60 ? 'c-g' : 'c-y');
+  document.getElementById('h-trades').textContent = S.totalTrades || 0;
+  document.getElementById('h-open').textContent   = S.openPositions || 0;
+
+  const mb = document.getElementById('mode-badge');
+  mb.textContent = (S.mode || 'paper').toUpperCase();
+  mb.className   = S.mode === 'live' ? 'badge badge-live' : 'badge badge-paper';
+
+  const dr = document.getElementById('dryrun-badge');
+  if (dr) {
+    const isDry = !!S.dryRun;
+    dr.textContent = isDry ? 'TEST' : 'REAL';
+    dr.className   = 'badge toggle-mode ' + (isDry ? 'badge-sim' : 'badge-real');
+    dr.title       = isDry
+      ? 'TEST mode — real prices, no orders sent. Click to switch to REAL.'
+      : 'REAL mode — orders WILL execute. Click to switch to TEST.';
+  }
+
+  document.getElementById('btn-start').disabled = S.status !== 'idle';
+  document.getElementById('btn-stop').disabled  = S.status !== 'trading';
+  setConn(S.status ? 'on' : 'off');
+
+  const pnlD = document.getElementById('db-pnl');
+  pnlD.textContent = (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toFixed(2);
+  pnlD.className   = 'stat-val ' + (pnl >= 0 ? 'c-g' : 'c-r');
+  document.getElementById('db-wr').textContent = S.totalTrades ? wr + '%' : '—';
+  document.getElementById('db-tt').textContent = S.totalTrades || 0;
+  document.getElementById('db-dd').textContent = (S.drawdown || 0).toFixed(2) + '%';
+  document.getElementById('db-drawdown').textContent = S.drawdown > 0 ? `DD ${(S.drawdown||0).toFixed(1)}%` : '';
+
+  updateChart(S.equityCurve || []);
+  renderRecent(S.trades || []);
+  renderAgentStats(S.agentStats || {}, S.trades || []);
+}
+
+function updateChart(curve) {
+  if (!equityChart) {
+    const ctx = document.getElementById('chart-equity').getContext('2d');
+    equityChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [{ data: [], borderColor: '#3d8ef0', backgroundColor: 'rgba(61,142,240,.06)', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: true }] },
+      options: {
+        responsive: true, animation: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => '$' + c.parsed.y.toFixed(2) } } },
+        scales: {
+          x: { display: false },
+          y: { grid: { color: '#1c2030' }, ticks: { color: '#4a5270', callback: v => '$' + v } }
+        }
+      }
+    });
+  }
+  const pts = curve.slice(-150);
+  equityChart.data.labels = pts.map(p => new Date(p.t).toLocaleTimeString());
+  equityChart.data.datasets[0].data = pts.map(p => p.v);
+  const init = S.initialCap || 10;
+  equityChart.data.datasets[0].borderColor = (pts[pts.length-1]?.v || init) >= init ? '#3d8ef0' : '#f0365a';
+  equityChart.update('none');
+}
+
+function renderRecent(trades) {
+  const tbody = document.getElementById('recent-tbody');
+  if (!trades.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No trades yet</td></tr>'; return; }
+  tbody.innerHTML = trades.slice(0, 10).map(t => {
+    const pnl    = t.pnl || 0;
+    const pCls   = pnl >= 0 ? 'c-g' : 'c-r';
+    const pTxt   = (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toFixed(3);
+    const sClass = t.side === 'YES' ? 'side-yes' : 'side-no';
+    const st     = (t.status || '');
+    const stBadge = st === 'matched' || st === 'filled' ? `<span class="bmatched">${st}</span>`
+                  : st === 'error' ? `<span class="berror">${st}${t.errorMsg?' ⚠':''}</span>`
+                  : `<span class="bsubmit">${st||'—'}</span>`;
+    return `<tr>
+      <td style="white-space:nowrap;color:var(--muted)">${new Date(t.timestamp||Date.now()).toLocaleTimeString()}</td>
+      <td><span class="${sClass}">${t.side}</span></td>
+      <td>${(t.entryPrice||t.price||0).toFixed(3)}</td>
+      <td>$${((t.entryPrice||t.price||0)*(t.size||0)).toFixed(2)}</td>
+      <td style="color:var(--purple)">${t.rrRatio||'—'}</td>
+      <td class="${pCls}" style="font-weight:700">${pTxt}</td>
+      <td>${stBadge}</td>
+      <td>${t.dryRun
+            ? '<span class="badge badge-sim" style="padding:1px 6px;font-size:9px">SIM</span>'
+            : t.mode==='live'
+              ? '<span class="blive">LIVE</span>'
+              : '<span class="bpaper">PAPER</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAgentStats(stats, trades) {
+  const btc    = stats.btcScalp;
+  const badge  = document.getElementById('btc-session-badge');
+  const btcEl  = document.getElementById('btc-stats');
+  const sigBox = document.getElementById('btc-signal-box');
+
+  if (btc?.trades > 0) {
+    const wr     = (btc.wins / btc.trades * 100).toFixed(1);
+    const losses = btc.trades - btc.wins;
+    btcEl.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12px">
+        <div><div style="color:var(--muted);font-size:9px">TRADES</div><strong>${btc.trades}</strong></div>
+        <div><div style="color:var(--muted);font-size:9px">WIN RATE</div><strong class="${parseFloat(wr)>=55?'c-g':'c-r'}">${wr}%</strong></div>
+        <div><div style="color:var(--muted);font-size:9px">P&L</div><strong class="${btc.pnl>=0?'c-g':'c-r'}">${btc.pnl>=0?'+':''}$${btc.pnl.toFixed(2)}</strong></div>
+        <div><div style="color:var(--muted);font-size:9px">LOSSES</div><strong class="${losses>=3?'c-r':'c-y'}">${losses}/3</strong></div>
+      </div>`;
+    if (losses >= 3) { badge.textContent = 'HALTED'; badge.style.color = 'var(--red)'; badge.style.borderColor = 'var(--red)'; }
+  }
+
+  const lastBtc = trades.find(t => t.agent === 'btcScalp');
+  if (lastBtc?.microstructure) {
+    const m   = lastBtc.microstructure;
+    const col = lastBtc.side === 'YES' ? 'var(--green)' : 'var(--red)';
+    sigBox.style.display = 'block';
+    sigBox.innerHTML = `
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <strong style="color:${col}">${lastBtc.side === 'YES' ? 'LONG' : 'SHORT'}</strong>
+        <span>conf: <strong>${(m.confidence||0)}%</strong></span>
+        <span style="color:var(--muted)">v30s: ${m.v30s||'—'}</span>
+      </div>
+      ${m.scoreBreakdown ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font-size:10px">
+        <span style="color:var(--muted)">vel: ${m.scoreBreakdown.velocity}</span>
+        <span style="color:var(--muted)">pres: ${m.scoreBreakdown.pressure}</span>
+        <span style="color:var(--muted)">vol: ${m.scoreBreakdown.volume}</span>
+        <span style="color:var(--muted)">ob: ${m.scoreBreakdown.orderbook}</span>
+        <span style="color:var(--red)">pen: ${m.scoreBreakdown.penalties}</span>
+        <span style="color:var(--yellow)">total: ${m.scoreBreakdown.total}</span>
+      </div>` : ''}`;
+  }
+}
+
+function renderTradeHistory() {
+  const trades = S.trades || [];
+  document.getElementById('th-count').textContent = trades.length + ' trade' + (trades.length !== 1 ? 's' : '');
+
+  const wins     = trades.filter(t => (t.pnl||0) > 0);
+  const losses   = trades.filter(t => (t.pnl||0) <= 0);
+  const totalPnl = trades.reduce((s,t) => s+(t.pnl||0), 0);
+  const avgWin   = wins.length   ? wins.reduce((s,t)=>s+(t.pnl||0),0)/wins.length   : null;
+  const avgLoss  = losses.length ? losses.reduce((s,t)=>s+(t.pnl||0),0)/losses.length : null;
+  const best     = trades.reduce((m,t)=>(t.pnl||0)>(m?.pnl||0)?t:m, null);
+  const worst    = trades.reduce((m,t)=>(t.pnl||0)<(m?.pnl||0)?t:m, null);
+
+  const pEl = document.getElementById('th-pnl');
+  pEl.textContent = (totalPnl>=0?'+$':'-$') + Math.abs(totalPnl).toFixed(3);
+  pEl.className   = 'stat-val ' + (totalPnl>=0?'c-g':'c-r');
+  document.getElementById('th-wr').textContent    = trades.length?(wins.length/trades.length*100).toFixed(1)+'%':'—';
+  document.getElementById('th-avgw').textContent  = avgWin!=null?'+$'+avgWin.toFixed(3):'—';
+  document.getElementById('th-avgl').textContent  = avgLoss!=null?'-$'+Math.abs(avgLoss).toFixed(3):'—';
+  document.getElementById('th-best').textContent  = best?'+$'+Math.max(0,best.pnl||0).toFixed(3):'—';
+  document.getElementById('th-worst').textContent = worst?'-$'+Math.abs(worst.pnl||0).toFixed(3):'—';
+
+  const tbody = document.getElementById('trade-tbody');
+  if (!trades.length) { tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--muted);padding:30px">No trades yet</td></tr>'; return; }
+  tbody.innerHTML = trades.map((t,i) => {
+    const pnl    = t.pnl||0;
+    const pCls   = pnl>=0?'c-g':'c-r';
+    const pTxt   = (pnl>=0?'+$':'-$')+Math.abs(pnl).toFixed(3);
+    const sClass = t.side==='YES'?'side-yes':'side-no';
+    const st     = t.status||'';
+    const stBadge= st==='matched'||st==='filled'?`<span class="bmatched">${t.reason||st}</span>`
+                 : st==='error'?`<span class="berror" title="${t.errorMsg||''}">${st}${t.errorMsg?' ⚠':''}</span>`
+                 : `<span class="bsubmit">${t.reason||st||'—'}</span>`;
+    return `<tr>
+      <td style="color:var(--muted)">${trades.length-i}</td>
+      <td style="color:var(--muted);white-space:nowrap">${new Date(t.timestamp||Date.now()).toLocaleString()}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.marketId||''}">${t.marketId?.slice(0,18)||'—'}…</td>
+      <td><span class="${sClass}">${t.side}</span></td>
+      <td>${(t.entryPrice||t.price||0).toFixed(3)}</td>
+      <td>${t.size||0}</td>
+      <td>$${((t.entryPrice||0)*(t.size||0)).toFixed(2)}</td>
+      <td style="color:var(--yellow)">${(t.ev||0).toFixed(3)}</td>
+      <td style="color:var(--muted)">${((t.confidence||0)*100).toFixed(0)}%</td>
+      <td style="color:var(--green);font-size:10px">${t.tpPrice?t.tpPrice.toFixed(3):'—'}</td>
+      <td style="color:var(--red);font-size:10px">${t.slPrice?t.slPrice.toFixed(3):'—'}</td>
+      <td style="color:var(--purple)">${t.rrRatio||'—'}</td>
+      <td class="${pCls}" style="font-weight:700">${pTxt}</td>
+      <td>${stBadge}</td>
+      <td>${t.dryRun
+            ? '<span class="badge badge-sim" style="padding:1px 6px;font-size:9px">SIM</span>'
+            : t.mode==='live'
+              ? '<span class="blive">LIVE</span>'
+              : '<span class="bpaper">PAPER</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportTrades() {
+  const trades = S.trades||[];
+  if (!trades.length) return alert('No trades to export');
+  const hdr = 'Time,Market,Side,Entry,Exit,Size,Notional,Reason,HoldMs,BtcEntry,BtcExit,BtcMove%,EV,Conf,TP,SL,RR,PnL,Status,Mode,Sim\n';
+  const fmt = (v, d=4) => (v == null || v === '' || isNaN(v)) ? '' : Number(v).toFixed(d);
+  const rows = trades.map(t=>[
+    new Date(t.timestamp||0).toISOString(),`"${t.marketId||''}"`,t.side,
+    fmt(t.entryPrice,4), fmt(t.exitPrice,4), t.size||0,
+    fmt((t.entryPrice||0)*(t.size||0),2), t.reason||'', t.holdMs||'',
+    fmt(t.btcAtEntry,2), fmt(t.btcAtExit,2), fmt(t.btcMovePct,4),
+    fmt(t.ev,4), fmt(t.confidence,2), fmt(t.tpPrice,4), fmt(t.slPrice,4),
+    t.rrRatio||'', fmt(t.pnl,4), t.status||'', t.mode||'', t.dryRun?'SIM':''
+  ].join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([hdr+rows],{type:'text/csv'}));
+  a.download=`trades-${Date.now()}.csv`;a.click();URL.revokeObjectURL(a.href);
+}
+
+async function startTrading() { await post('/api/start',{}); }
+async function stopTrading()  { await post('/api/stop',{});  }
+async function resetSystem()  { if (!confirm('Reset session stats and positions?')) return; await post('/api/reset',{}); }
+
+async function toggleDryRun() {
+  const next = !S.dryRun;
+  if (next === false) {
+    if (!confirm('Switch to REAL mode? Orders will execute against your Polymarket account.')) return;
+  }
+  const r = await post('/api/dryrun/toggle', { dryRun: next });
+  if (r && typeof r.dryRun === 'boolean') S.dryRun = r.dryRun;
+  render();
+}
+
+async function testProxy() {
+  const btn=document.getElementById('btn-test-proxy');
+  btn.disabled=true;btn.textContent='Testing…';setMsg('proxy-test-msg','Connecting…','c-b');
+  const r=await post('/api/proxy/test',{});
+  if(r?.ok)setMsg('proxy-test-msg',`✓ Reachable (${r.latencyMs}ms) — VPN working`,'c-g');
+  else setMsg('proxy-test-msg','✗ Not reachable — connect Proton VPN first','c-r');
+  btn.disabled=false;btn.textContent='⚡ Test Now';
+}
+async function generateKey() {
+  const btn=document.getElementById('btn-gen-key');
+  btn.disabled=true;btn.textContent='Working…';setMsg('key-gen-msg','Signing…','c-b');
+  document.getElementById('register-prompt').style.display='none';
+  const r=await post('/api/proxy/generate-key',{});
+  if(r?.ok){setMsg('key-gen-msg','✓ Key saved — ready for Live trading','c-g');loadWallet();}
+  else if(r?.error==='WALLET_NOT_REGISTERED'){
+    setMsg('key-gen-msg','','c-b');
+    document.getElementById('register-prompt').style.display='block';
+    document.getElementById('reg-wallet').textContent=r.walletAddress||'';
+  } else setMsg('key-gen-msg','✗ '+(r?.error||'Failed'),'c-r');
+  btn.disabled=false;btn.textContent='🔑 Generate Key';
+}
+async function loadWallet() {
+  const el=document.getElementById('vpn-wallet-detail');
+  const d=await get('/api/wallet');
+  if(!d?.ok){el.innerHTML=`<span style="color:var(--red)">${d?.error||'Not configured'}</span>`;return;}
+  const usdc=((parseFloat(d.usdcE)||0)+(parseFloat(d.usdc)||0)).toFixed(2);
+  const mWarn=d.matic&&parseFloat(d.matic)<0.01?' <span style="color:var(--yellow)">⚠ low</span>':'';
+  el.innerHTML=`<div style="display:grid;grid-template-columns:130px 1fr;row-gap:5px;font-size:12px">
+    <span style="color:var(--muted)">Signer</span>  <code style="font-size:10px">${d.signer}</code>
+    <span style="color:var(--muted)">Deposit</span> <code style="font-size:10px">${d.depositWallet||'—'}</code>
+    <span style="color:var(--muted)">MATIC</span>   <span><strong>${d.matic||'—'}</strong>${mWarn}</span>
+    <span style="color:var(--muted)">USDC.e</span>  <strong>$${d.usdcE||'—'}</strong>
+    <span style="color:var(--muted)">USDC</span>    <strong>$${d.usdc||'—'}</strong>
+    <span style="color:var(--muted)">Total USDC</span><strong style="color:${parseFloat(usdc)>=10?'var(--green)':'var(--yellow)'}">$${usdc}${parseFloat(usdc)<10?' — need $10':'  ✓'}</strong>
+  </div>`;
+}
+
+setInterval(async()=>{
+  const d=await get('/api/btc'); if(!d?.ok||!d.price) return;
+  const pct=v=>{const n=parseFloat(v||0);return`<span style="color:${n>0?'var(--green)':n<0?'var(--red)':'var(--muted)'}">${n>=0?'+':''}${n.toFixed(3)}%</span>`;};
+  document.getElementById('st-price').textContent='$'+(+d.price).toLocaleString();
+  document.getElementById('st-v30').innerHTML=pct(d.v30);
+  document.getElementById('st-pres').innerHTML=pct((d.pressure||0)*100);
+  document.getElementById('st-ob').innerHTML=pct((d.obImbalance||0)*100);
+  document.getElementById('st-vol').textContent=(+d.volRatio||0).toFixed(2)+'x';
+  document.getElementById('st-spd').textContent=(+d.spreadBps||0).toFixed(1)+'bps';
+  document.getElementById('st-z').textContent=(+d.zScore||0).toFixed(2);
+  const conf=d.confidence||0;
+  const confEl=document.getElementById('st-conf');
+  confEl.textContent=conf+' '+(d.signal==='NO TRADE'?'–':d.signal||'–');
+  confEl.style.color=conf>=65?'var(--green)':conf>=45?'var(--yellow)':'var(--muted)';
+  const wsDot=document.getElementById('btc-ws-dot');
+  wsDot.style.background=d.connected?'var(--green)':'var(--red)';
+  wsDot.style.boxShadow=d.connected?'0 0 5px var(--green)':'none';
+},2000);
+
+function appendLog(msg){const el=document.getElementById('log-box');if(!el)return;const d=document.createElement('div');d.textContent=new Date().toLocaleTimeString()+'  '+msg;d.style.color='var(--text)';el.appendChild(d);el.scrollTop=el.scrollHeight;}
+function setMsg(id,txt,cls){const el=document.getElementById(id);if(!el)return;el.textContent=txt;el.className=cls||'';}
+
+async function get(url){try{return(await fetch(url)).json();}catch{return null;}}
+async function post(url,body){try{return(await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();}catch(e){appendLog('Error: '+e.message);return null;}}
+
+connect();
+</script>
+</body>
+</html>

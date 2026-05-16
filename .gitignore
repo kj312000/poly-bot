@@ -18,7 +18,8 @@ logs/
 # Dashboard generated files
 dashboard/last-session.json
 dashboard/dashboard.json
-dashboard/*.html
+dashboard/backtest-report-*.html
+dashboard/report-*.html
 dashboard/*.log
 dashboard/optimization-history.json
 dashboard/backtest-summary.json
