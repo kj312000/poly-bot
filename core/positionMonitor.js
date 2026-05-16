@@ -305,7 +305,7 @@ class PositionMonitor {
         // For SELL FAK: limit must be ≤ best bid for guaranteed fill.
         // Wide-spread BTC 5m markets have bid/ask spread of 0.15-0.30 — using mid
         // as sell limit guarantees FAK cancellation. Must use real best bid.
-        const tick = 0.01;
+        const tick = this.config.exit_bid_offset ?? 0.01;
         let bestBid = this._bestBids.get(entry.tokenId) ?? null;
 
         // WS bid not yet available — fetch real orderbook for guaranteed fill price
