@@ -30,38 +30,48 @@ class TelegramCommander {
 
   start() {
     if (!this._enabled) {
-      this._onLog('[tgCmd] Disabled — set TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID');
+      this._onLog('[tgCmd] Disabled — TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID missing');
       return;
     }
-    this._onLog('[tgCmd] Command listener started');
-    this._send('🤖 Bot online.\n/start /stop /status /dryrun /help').catch(() => {});
+    this._onLog(`[tgCmd] Starting — token=...${this._token.slice(-6)} chatId=${this._chatId}`);
+    this._send('🤖 Bot online.\n/start /stop /status /dryrun /help')
+      .then(() => this._onLog('[tgCmd] Startup message sent OK'))
+      .catch(e => this._onLog(`[tgCmd] Startup message failed: ${e.message}`));
     this._poll();
   }
 
   stop() { this._stopped = true; }
 
   async _poll() {
+    this._onLog('[tgCmd] Poll loop started');
     while (!this._stopped) {
       try {
         const updates = await this._getUpdates(55);
+        if (updates.length > 0) this._onLog(`[tgCmd] Got ${updates.length} update(s)`);
         for (const upd of updates) {
           this._offset = upd.update_id + 1;
           this._handleUpdate(upd).catch(e => this._onLog(`[tgCmd] Handler error: ${e.message}`));
         }
       } catch (e) {
-        this._onLog(`[tgCmd] Poll error: ${e.message}`);
-        await this._sleep(5000);
+        const isConflict = e.message && e.message.includes('Conflict');
+        this._onLog(`[tgCmd] Poll error${isConflict ? ' (another instance running — waiting 30s)' : ''}: ${e.message}`);
+        await this._sleep(isConflict ? 30000 : 5000);
       }
     }
+    this._onLog('[tgCmd] Poll loop stopped');
   }
 
   async _handleUpdate(upd) {
     const msg = upd.message || upd.channel_post;
     if (!msg?.text) return;
-    if (String(msg.chat.id) !== this._chatId) return;
+    this._onLog(`[tgCmd] Incoming chat_id=${msg.chat.id} text="${msg.text}"`);
+    if (String(msg.chat.id) !== this._chatId) {
+      this._onLog(`[tgCmd] Rejected — unauthorized chat_id=${msg.chat.id} (expected ${this._chatId})`);
+      return;
+    }
 
     const cmd = (msg.text || '').split(' ')[0].toLowerCase().replace(/@\w+$/, '');
-    this._onLog(`[tgCmd] ${cmd}`);
+    this._onLog(`[tgCmd] Dispatching command: ${cmd}`);
 
     switch (cmd) {
       case '/start':

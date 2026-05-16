@@ -24,7 +24,9 @@
       "Bash(node --check core/localOrderbook.js)",
       "Read(//c/Users/kaust/.claude/projects/c--Users-kaust-Documents-polymarket/memory/**)",
       "Bash(node -e \"const pkg = require\\('@polymarket/clob-client-v2'\\); console.log\\('exports:', Object.keys\\(pkg\\)\\);\")",
-      "Bash(del \"c:\\\\Users\\\\kaust\\\\Documents\\\\polymarket\\\\railway.toml\")"
+      "Bash(del \"c:\\\\Users\\\\kaust\\\\Documents\\\\polymarket\\\\railway.toml\")",
+      "Bash(tasklist /FI \"IMAGENAME eq node.exe\")",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue)"
     ],
     "additionalDirectories": [
       "c:\\Users\\kaust\\.claude\\projects\\c--Users-kaust-Documents-polymarket\\memory"

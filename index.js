@@ -27,6 +27,7 @@ const { ReportGenerator } = require('./backtest/reportGenerator');
 const { StrategyOptimizer } = require('./optimization/strategyOptimizer');
 const { AnnualAnalyzer }   = require('./optimization/annualAnalyzer');
 
+const { TelegramCommander } = require('./core/telegramCommander');
 const arbitrageAgent = require('./agents/arbitrageAgent');
 
 const AGENTS = [arbitrageAgent];
@@ -322,6 +323,39 @@ async function main() {
       log('shutdown', 'FastExecutor + BTC feed stopped');
     });
   }
+
+  // ── Telegram Commander ────────────────────────────────────────────────────────
+
+  const tgCmd = new TelegramCommander({
+    token:  process.env.TELEGRAM_BOT_TOKEN || '',
+    chatId: process.env.TELEGRAM_CHAT_ID   || '',
+    onStart: () => Promise.resolve({ ok: false, error: 'CLI already running — use /status to check state' }),
+    onStop: () => {
+      shutdownRequested = true;
+      if (fastExecutor) fastExecutor.stop();
+      log('tgCmd', 'Stop requested via Telegram');
+    },
+    onStatus: () => {
+      const s = coordinator.state;
+      const pnl = s.equity - config.total_capital;
+      const pnlSign = pnl >= 0 ? '+' : '';
+      const pnlPct = ((pnl / config.total_capital) * 100).toFixed(1);
+      const wins  = s.tradeHistory.filter(t => t.pnl > 0).length;
+      const total = s.tradeHistory.length;
+      const wr    = total ? ((wins / total) * 100).toFixed(1) : '—';
+      const open  = positionBook.getOpen().length;
+      return `Equity: $${s.equity.toFixed(2)}\nP&L: ${pnlSign}$${pnl.toFixed(2)} (${pnlPct}%)\nWin rate: ${wr}% (${wins}/${total})\nMode: ${config.mode}${config.dryRun ? ' [DRY RUN]' : ''}\nOpen positions: ${open}`;
+    },
+    onToggleDryRun: () => {
+      config.dryRun = !config.dryRun;
+      if (fastExecutor) fastExecutor.dryRun = config.dryRun;
+      log('tgCmd', `dryRun → ${config.dryRun}`);
+      return config.dryRun;
+    },
+    onLog: (msg) => process.stdout.write(`[${new Date().toISOString()}] ${msg}\n`),
+  });
+  tgCmd.start();
+  onShutdown(() => { tgCmd.stop(); });
 
   // ── Main trading loop (runs until SIGINT/SIGTERM or max drawdown) ─────────────
 

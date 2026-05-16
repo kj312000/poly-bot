@@ -732,6 +732,8 @@ const tgCommander = new TelegramCommander({
 
   onStop: () => {
     dash.stopFlag = true;
+    const fe = _getActiveFastExec();
+    if (fe) { fe.stop(); taskLog('[tgCmd] FastExecutor stopped immediately'); }
     taskLog('[tgCmd] Stop requested via Telegram');
   },
 
