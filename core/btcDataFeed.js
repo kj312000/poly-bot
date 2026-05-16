@@ -24,7 +24,7 @@ const PRICE_HISTORY  = 120;   // price snapshots (one per tick batch)
 const VOL_EMA_PERIOD = 20;    // candles for volume EMA
 const RECONNECT_MS   = 3000;
 const MAX_RECONNECTS = 50;     // hard cap — if endpoint is permanently down, stop retrying
-const WARMUP_SNAPS   = 15;     // min price snapshots before signals are valid post-reconnect
+const WARMUP_SNAPS   = 1;      // min price snapshots before signals are valid post-reconnect
 
 // ── BtcDataFeed ───────────────────────────────────────────────────────────────
 
